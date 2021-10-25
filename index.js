@@ -1,34 +1,31 @@
-const app = require('express')()
-const http = require('http').createServer(app)
-const io = require('socket.io')(http);
+const express = require("express");
+var http = require("http");
+const app = express();
+const port = process.env.PORT || 5000;
+var server = http.createServer(app);
+var io = require("socket.io")(server);
 
+//middlewre
+app.use(express.json());
+var clients = {};
 app.get('/', (req, res) => {
-    res.send("Node Server is running. Yay!!")
+    res.send("Node Server is running. Yay with new code!!")
 })
-
-io.on('connection', socket => {
-    //Get the chatID of the user and join in a room of the same chatID
-    chatID = socket.handshake.query.chatID
-    socket.join(chatID)
-
-    //Leave the room if the user closes the socket
-    socket.on('disconnect', () => {
-        socket.leave(chatID)
-    })
-
-    //Send message to only a particular user
-    socket.on('send_message', message => {
-        receiverChatID = message.receiverChatID
-        senderChatID = message.senderChatID
-        content = message.content
-
-        //Send message to only that particular room
-        socket.in(receiverChatID).emit('receive_message', {
-            'content': content,
-            'senderChatID': senderChatID,
-            'receiverChatID': receiverChatID,
-        })
-    })
+io.on("connection", (socket) => {
+    console.log("connetetd");
+    console.log(socket.id, "has joined");
+    socket.on("signin", (id) => {
+        console.log(id);
+        clients[id] = socket;
+        console.log(clients);
+    });
+    socket.on("message", (msg) => {
+        console.log(msg);
+        let targetId = msg.targetId;
+        if (clients[targetId]) clients[targetId].emit("message", msg);
+    });
 });
 
-http.listen(process.env.PORT)
+server.listen(port, "0.0.0.0", () => {
+    console.log("server started");
+});
